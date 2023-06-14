@@ -762,6 +762,38 @@ WOLFTPM_API int wolfTPM2_LoadRsaPublicKey_ex(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* ke
     const byte* rsaPub, word32 rsaPubSz, word32 exponent,
     TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg);
 
+
+/*!
+    \ingroup wolfTPM2_Wrappers
+    \brief Import an external RSA private key with attributes
+
+    \return TPM_RC_SUCCESS: successful
+    \return TPM_RC_FAILURE: generic failure (check TPM IO and TPM return code)
+    \return BAD_FUNC_ARG: check the provided arguments
+    \return BUFFER_E: arguments size is larger than what the TPM buffers allow
+
+    \param dev pointer to a TPM2_DEV struct
+    \param parentKey pointer to a struct of WOLFTPM2_HANDLE type (can be NULL for external keys and the key will be imported under the OWNER hierarchy)
+    \param keyBlob pointer to an empty struct of WOLFTPM2_KEYBLOB type
+    \param rsaPub pointer to a byte buffer, containing the public part of the RSA key
+    \param rsaPubSz integer value of word32 type, specifying the public part buffer size
+    \param exponent integer value of word32 type, specifying the RSA exponent
+    \param rsaPriv pointer to a byte buffer, containing the private material of the RSA key
+    \param rsaPrivSz integer value of word32 type, specifying the private material buffer size
+    \param scheme value of TPMI_ALG_RSA_SCHEME type, specifying the RSA scheme
+    \param hashAlg integer value of TPMI_ALG_HASH type, specifying a supported TPM 2.0 hash algorithm
+    \param attributes additional TPMA attributes to add to the key
+
+    \sa wolfTPM2_LoadRsaPrivateKey
+    \sa wolfTPM2_LoadRsaPrivateKey_ex
+    \sa wolfTPM2_LoadPrivateKey
+*/
+WOLFTPM_API int wolfTPM2_ImportRsaPrivateKeyWithAttributes(WOLFTPM2_DEV* dev,
+    const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob,
+    const byte* rsaPub, word32 rsaPubSz, word32 exponent, const byte* rsaPriv,
+    word32 rsaPrivSz, TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg,
+    TPMA_OBJECT attributes);
+
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Import an external RSA private key
@@ -1069,7 +1101,8 @@ WOLFTPM_API int wolfTPM2_SensitiveToPrivate(TPM2B_SENSITIVE* sens, TPM2B_PRIVATE
 */
 WOLFTPM_API int wolfTPM2_RsaPrivateKeyImportDer(WOLFTPM2_DEV* dev,
     const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob, const byte* input,
-    word32 inSz, TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg);
+    word32 inSz, TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg,
+    TPMA_OBJECT attributes);
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -1091,7 +1124,7 @@ WOLFTPM_API int wolfTPM2_RsaPrivateKeyImportDer(WOLFTPM2_DEV* dev,
 WOLFTPM_API int wolfTPM2_RsaPrivateKeyImportPem(WOLFTPM2_DEV* dev,
     const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob,
     const char* input, word32 inSz, char* pass,
-    TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg);
+    TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg, TPMA_OBJECT attributes);
 
 /*!
     \ingroup wolfTPM2_Wrappers

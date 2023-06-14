@@ -1901,10 +1901,11 @@ int wolfTPM2_LoadRsaPublicKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
         TPM_ALG_NULL, TPM_ALG_NULL);
 }
 
-int wolfTPM2_ImportRsaPrivateKey(WOLFTPM2_DEV* dev,
-    const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob, const byte* rsaPub,
-    word32 rsaPubSz, word32 exponent, const byte* rsaPriv, word32 rsaPrivSz,
-    TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg)
+int wolfTPM2_ImportRsaPrivateKeyWithAttributes(WOLFTPM2_DEV* dev,
+    const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob,
+    const byte* rsaPub, word32 rsaPubSz, word32 exponent, const byte* rsaPriv,
+    word32 rsaPrivSz, TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg,
+    TPMA_OBJECT attributes)
 {
     TPM2B_PUBLIC pub;
     TPM2B_SENSITIVE sens;
@@ -1920,8 +1921,14 @@ int wolfTPM2_ImportRsaPrivateKey(WOLFTPM2_DEV* dev,
     XMEMSET(&pub, 0, sizeof(pub));
     pub.publicArea.type = TPM_ALG_RSA;
     pub.publicArea.nameAlg = WOLFTPM2_WRAP_DIGEST;
-    pub.publicArea.objectAttributes = (TPMA_OBJECT_sign | TPMA_OBJECT_decrypt |
-        TPMA_OBJECT_userWithAuth | TPMA_OBJECT_noDA);
+    /* set default plus additional attributes */
+    if (attributes) {
+        pub.publicArea.objectAttributes = attributes;
+    }
+    else {
+        pub.publicArea.objectAttributes = (TPMA_OBJECT_sign |
+            TPMA_OBJECT_decrypt | TPMA_OBJECT_userWithAuth | TPMA_OBJECT_noDA);
+    }
     pub.publicArea.parameters.rsaDetail.symmetric.algorithm = TPM_ALG_NULL;
     pub.publicArea.parameters.rsaDetail.keyBits = rsaPubSz * 8;
     pub.publicArea.parameters.rsaDetail.exponent = exponent;
@@ -1942,6 +1949,16 @@ int wolfTPM2_ImportRsaPrivateKey(WOLFTPM2_DEV* dev,
     XMEMCPY(sens.sensitiveArea.sensitive.rsa.buffer, rsaPriv, rsaPrivSz);
 
     return wolfTPM2_ImportPrivateKey(dev, parentKey, keyBlob, &pub, &sens);
+}
+
+int wolfTPM2_ImportRsaPrivateKey(WOLFTPM2_DEV* dev,
+    const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob, const byte* rsaPub,
+    word32 rsaPubSz, word32 exponent, const byte* rsaPriv, word32 rsaPrivSz,
+    TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg)
+{
+    /* just call without additional attributes */
+    return wolfTPM2_ImportRsaPrivateKeyWithAttributes(dev, parentKey, keyBlob,
+        rsaPub, rsaPubSz, exponent, rsaPriv, rsaPrivSz, scheme, hashAlg, 0);
 }
 
 int wolfTPM2_LoadRsaPrivateKey_ex(WOLFTPM2_DEV* dev,
@@ -2128,7 +2145,8 @@ int wolfTPM2_ReadPublicKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
 #ifndef NO_ASN
 int wolfTPM2_RsaPrivateKeyImportDer(WOLFTPM2_DEV* dev,
     const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob, const byte* input,
-    word32 inSz, TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg)
+    word32 inSz, TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg,
+    TPMA_OBJECT attributes)
 {
     int rc = 0;
     int initRc = -1;
@@ -2162,8 +2180,8 @@ int wolfTPM2_RsaPrivateKeyImportDer(WOLFTPM2_DEV* dev,
     }
 
     if (rc == 0) {
-        rc = wolfTPM2_ImportRsaPrivateKey(dev, parentKey, keyBlob, n, nSz, e, q,
-            qSz, scheme, hashAlg);
+        rc = wolfTPM2_ImportRsaPrivateKeyWithAttributes(dev, parentKey,
+            keyBlob, n, nSz, e, q, qSz, scheme, hashAlg, attributes);
     }
 
     if (initRc == 0)
@@ -2178,7 +2196,7 @@ int wolfTPM2_RsaPrivateKeyImportDer(WOLFTPM2_DEV* dev,
 int wolfTPM2_RsaPrivateKeyImportPem(WOLFTPM2_DEV* dev,
     const WOLFTPM2_KEY* parentKey, WOLFTPM2_KEYBLOB* keyBlob,
     const char* input, word32 inSz, char* pass,
-    TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg)
+    TPMI_ALG_RSA_SCHEME scheme, TPMI_ALG_HASH hashAlg, TPMA_OBJECT attributes)
 {
     int rc = 0;
     byte* derBuf;
@@ -2201,7 +2219,7 @@ int wolfTPM2_RsaPrivateKeyImportPem(WOLFTPM2_DEV* dev,
     /* returns the number of bytes */
     if (rc > 0) {
         rc = wolfTPM2_RsaPrivateKeyImportDer(dev, parentKey, keyBlob, derBuf,
-            (word32)rc, scheme, hashAlg);
+            (word32)rc, scheme, hashAlg, attributes);
     }
     /* shouldn't be possible to have a 0 length der, check anyways */
     else if (rc == 0) {
